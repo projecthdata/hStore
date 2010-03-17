@@ -11,6 +11,14 @@ The application consists of two pieces: a CGI executable (hstore) and a plugin
 library (libhstore_plugins.so). Both can be installed into the cgi-bin on your
 web server. Use the supplied hstore.conf to specify options.
 
+NOTE: This code is still in its infancy. It DOES NOT yet support (but will
+eventually) the following features:
+
+- Patient authorization via OAuth
+- Any authentication mechanisms
+- PKI to work with encrypted documents instead of clear text
+- ATOM feed or subscription based support
+
 OPTIONS
 
 Options are set in hstore.conf. Presently available options are below.
