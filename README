@@ -1,0 +1,75 @@
+hStore RESTful Module
+Jonathan Zdziarski <zdziarski@mitre.org>
+hData Dev List <hdata-dev-list@lists.mitre.org>
+
+ABOUT
+
+The hStore Module is an implementation of the hStore RESTful specification
+which can be integrated with almost any web server capable of handling CGI.
+
+The application consists of two pieces: a CGI executable (hstore) and a plugin
+library (libhstore_plugins.so). Both can be installed into the cgi-bin on your
+web server. Use the supplied hstore.conf to specify options.
+
+OPTIONS
+
+Options are set in hstore.conf. Presently available options are below.
+
+DocumentRoot
+	All hData records are stored on the file system for the best overall
+	flexibility. Create a directory which the web server will have access
+	to read and write to, and set this as your document root. hData
+	documents will be stored offset to this directory.
+
+Plugin
+	The hData server module uses a plugin architecture for future expansion.
+	Multiple plugins may be tied to any HTTP request method that your
+	web server will support, and will be fired in the order in which
+	you define them in hdata.conf. Each plugin can make changes to the
+	content, output information, or return an error code. A small set of
+	default plugins (for bare minimum functionality) have been provided.
+
+PLUGIN DEVELOPMENT
+	Plugins can be developed quite easily to expand the functionality of
+	hStore. Plugins are compiled into shared libraries, then specified in
+	hstore.conf, as follows:
+
+	Plugin  GET     libhstore_plugins.so    hStoreDocReader
+
+	Plugin	A reserved keyword denoting that this is a plugin configuration
+
+	GET	The request method that should fire your plugin. You may use
+		an asterisk (*) to define your plugin as a wildcard for all
+		request methods, or declare your plugin multiple times with
+		different request methods.
+
+	libhstore_plugins.so
+		The path to the shared object containing your plugin code. This
+		can reside anywhere so long as the CGI will have access to it
+		when it is running.
+
+	hStoreDocReader
+		The symbol (function) name within your shared object to call
+		to execute the actual plugin code.
+
+
+	The function prototype for all plugins is as follows:
+
+	int functionName(hstore_context_t ctx);
+
+	Where functionName is replaced with the name of your actual plugin.
+	The hStore context structure contains a number of useful pieces of
+	data which your plugin may transform or use for final output.
+
+	typedef struct hstore_context {
+	    hstore_config_t config;
+	    char *request_path;
+	    char *request_method;
+	    char *remote_addr;
+	} *hstore_context_t;
+
+        See the hstore_plugins.c code for more examples of how the plugin API
+	can be used. See config.h for information about reading options from
+	the configuration.
+
+
