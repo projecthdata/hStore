@@ -20,6 +20,36 @@
 #include "hstore.h"
 #include "config.h"
 #include "log.h"
+#include "util.h"
+
+int hStoreLogger(hstore_context_t ctx);
+int hStoreDocDelete(hstore_context_t ctx);
+int hStoreDocReader(hstore_context_t ctx);
+int hStoreDocWriter(hstore_context_t ctx);
+
+int hStoreLogger(hstore_context_t ctx) {
+    char *logfile = hstore_option_findtext(ctx->config, "LogFile");
+    FILE *file;
+    char date[80];
+
+    if (logfile == NULL) {
+        LOGERR("%s logfile %s does not exist", __func__, logfile); 
+        return EINVAL;
+    }
+
+    file = fopen(logfile, "a");
+    if (!file) {
+        LOGERR("%s could not open logfile %s for writing: %s", __func__, 
+            logfile, strerror(errno));
+        return errno;
+    }
+
+    fprintf(file, "%d: [%s] %s: %s %s\n", getpid(), format_date(date), 
+        ctx->remote_addr, ctx->request_method, ctx->request_path);
+    fclose(file);
+
+    return 0;
+}
 
 int hStoreDocDelete(hstore_context_t ctx) {
     char *document_root = hstore_option_findtext(ctx->config, "DocumentRoot");
@@ -32,7 +62,7 @@ int hStoreDocDelete(hstore_context_t ctx) {
 
     unlink(document_path);
 
-    LOG("OK %s", ctx->request_path); 
+    OUTPUT("OK %s", ctx->request_path); 
     free(document_path);
     return 0;
 }

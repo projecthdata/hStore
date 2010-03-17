@@ -21,6 +21,11 @@ DocumentRoot
 	to read and write to, and set this as your document root. hData
 	documents will be stored offset to this directory.
 
+LogFile
+	Log file for the hStoreLogger plugin to write to to record all
+	requests. This file must be accessible to the hStore server from the 
+	web server.
+
 Plugin
 	The hData server module uses a plugin architecture for future expansion.
 	Multiple plugins may be tied to any HTTP request method that your
