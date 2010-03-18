@@ -14,6 +14,5 @@
 void LOGERR(const char *err, ... );
 void LOG (const char *text, ... );
 void OUTPUT (const char *text, ... );
-char *format_date(char *buf);
 
 #endif /* _LOG_H */

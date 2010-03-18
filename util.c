@@ -9,13 +9,15 @@
 */
 
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 #include "auto-config.h"
 #include "util.h"
 
-void chomp(char *buf) {
+void hstore_chomp(char *buf) {
   size_t len = strlen(buf);
   if (buf[len-1] == 10) {
     buf[len-1] = 0;
@@ -101,3 +103,38 @@ strlcpy(dst, src, siz)
 }
 #endif
 
+char *
+hstore_format_date(char *buf)
+{
+    struct tm *l;
+    time_t t = time(NULL);
+
+    l = localtime(&t);
+    sprintf(buf, "%02d/%02d/%04d %02d:%02d:%02d",
+         l->tm_mon+1, l->tm_mday, l->tm_year+1900, l->tm_hour, l->tm_min,
+         l->tm_sec);
+    return buf;
+}
+
+int
+hstore_path_depth(char *buf)
+{
+    int depth = 0;
+    char *p, *str;
+
+    if (buf == NULL)
+        return 0;
+
+    str = strdup(buf);
+    p = strtok(str, "/");
+    while(p) {
+        if (!strcmp(p, ".."))
+            depth--;
+        else if (strcmp(p, ".")) 
+            depth++;
+        p = strtok(NULL, "/");
+    }
+            
+    free(str);
+    return depth;
+}

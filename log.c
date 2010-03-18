@@ -16,19 +16,7 @@
 
 #include "auto-config.h"
 #include "log.h"
-
-char *
-format_date(char *buf)
-{
-    struct tm *l;
-    time_t t = time(NULL);
-
-    l = localtime(&t);
-    sprintf(buf, "%02d/%02d/%04d %02d:%02d:%02d",
-         l->tm_mon+1, l->tm_mday, l->tm_year+1900, l->tm_hour, l->tm_min,
-         l->tm_sec);
-    return buf;
-}
+#include "util.h"
 
 void LOGERR (const char *err, ... )
 {
@@ -53,7 +41,7 @@ void LOG (const char *text, ... )
     vsnprintf (buf, sizeof(buf), text, args);
     va_end (args);
 
-    fprintf(stderr, "%d: [%s] %s\n", getpid(), format_date(date), buf);
+    fprintf(stderr, "%d: [%s] %s\n", getpid(), hstore_format_date(date), buf);
 }
 
 void OUTPUT (const char *text, ... )

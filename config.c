@@ -49,7 +49,7 @@ int hstore_config_read(hstore_config_t config, const char *filename) {
         char *property, *value;
         if (buf[0] == '#' || buf[0] == ';' || buf[0] == '\n')
             continue;
-        chomp(buf);
+        hstore_chomp(buf);
 
         property = strtok(buf, " \t");
         if (!property)

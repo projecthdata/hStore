@@ -13,6 +13,8 @@
 #ifndef _HSTORE_H_
 #define _HSTORE_H_
 
+#define HRF_VERSION	0.8
+
 typedef struct hstore_context {
     hstore_config_t config;
     char *request_path;

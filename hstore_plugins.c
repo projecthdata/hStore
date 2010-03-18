@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
+#include <dirent.h>
 #include <sys/stat.h>
 
 #include "auto-config.h"
@@ -44,7 +45,7 @@ int hStoreLogger(hstore_context_t ctx) {
         return errno;
     }
 
-    fprintf(file, "%d: [%s] %s: %s %s\n", getpid(), format_date(date), 
+    fprintf(file, "%d: [%s] %s: %s %s\n", getpid(), hstore_format_date(date), 
         ctx->remote_addr, ctx->request_method, ctx->request_path);
     fclose(file);
 
@@ -73,23 +74,92 @@ int hStoreDocReader(hstore_context_t ctx) {
     FILE *file;
     char buf[128];
 
-    if (document_root)
+    if (document_root) {
         asprintf(&document_path, "%s/%s", document_root, ctx->request_path);
-    else
+    } else {
         document_path = strdup(ctx->request_path);
-
-    file = fopen(document_path, "r");
-    if (!file) {
-        LOGERR("%s could not open file for reading: %s", __func__, 
-            strerror(errno));
-        return errno;
     }
 
-    printf("Content-Type: application/xml\n\n");
-    while((fgets(buf, sizeof(buf), file))!=NULL) {
-        fprintf(stdout, "%s", buf);
+    /* Dynamically write root document */
+    if (!strcmp(ctx->request_path + strlen(ctx->request_path) - 9,
+        "/root.xml") && hstore_path_depth(ctx->request_path) == 2)
+    {
+        struct stat s;
+        char *dir = strdup(ctx->request_path);
+        char *dirpath, *j;
+        DIR *dirp;
+        struct dirent *dirent;
+        char date[80];
+
+
+        hstore_format_date(date);
+        j = strchr(date, ' ');
+        if (j) 
+            j[0] = 0; 
+
+        dir[strlen(dir)-8] = 0;
+
+        if (document_root)
+            asprintf(&dirpath, "%s/%s", document_root, dir);
+        else
+            dirpath = strdup(dir);
+
+        /* Begin output */
+        printf("Content-Type: application/xml\n\n");
+        printf(
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+"<root xmlns=\"http://projecthdata.org/hdata/schemas/2009/06/core\""
+" xmlns:xsi=\"http://www.w2.org/2001/XMLSchema-instance\">\n"
+"    <documentId>rootid0</documentId>\n"
+"    <version>%1.1f</version>\n"
+"    <created>%s</created>\n"
+"    <lastModified>%s</lastModified>\n"
+"    <sections>\n",
+    HRF_VERSION, date, date);
+
+        LOG("%s scanning %s for section directories", __func__, dirpath);
+
+        dirp = opendir(dirpath);
+        while( ( dirent = readdir(dirp) ) != NULL) {
+            char *directory_path;
+            if (!strcmp(dirent->d_name, ".") || !strcmp(dirent->d_name, ".."))
+                continue;
+            asprintf(&directory_path, "%s/%s", dirpath, dirent->d_name);
+            if (stat(directory_path, &s)==0) {
+                if (s.st_mode & S_IFDIR) {
+                    LOG("%s found directory %s at %s", __func__, dirent->d_name,
+                        directory_path);
+                    printf(
+                    "        <section typeId=\"\" path=\"%s\" name=\"\"/>\n", 
+                        dirent->d_name);
+                }
+            } else {
+                LOG("%s stat failed for %s; ignoring.", __func__, 
+                    directory_path);
+            }
+
+            free(directory_path);
+        }
+
+        free(dirpath);
+        printf("    </sections>\n");
+        printf("</root>\n");
+
+    /* Fetch all oher files */
+    } else {
+        file = fopen(document_path, "r");
+        if (!file) {
+            LOGERR("%s could not open file for reading: %s", __func__, 
+                strerror(errno));
+            return errno;
+        }
+
+        printf("Content-Type: application/xml\n\n");
+        while((fgets(buf, sizeof(buf), file))!=NULL) {
+            fprintf(stdout, "%s", buf);
+        }
+        fclose(file);
     }
-    fclose(file);
 
     free(document_path);
     return 0;

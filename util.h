@@ -11,7 +11,9 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
-void chomp(char *buf);
+void hstore_chomp(char *buf);
+char *hstore_format_date(char *buf);
+int hstore_path_depth(char *buf);
 
 #ifndef HAVE_STRL
 size_t strlcpy(char *dst, const char *src, size_t siz);
