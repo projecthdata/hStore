@@ -153,7 +153,13 @@ int hStoreDocReader(hstore_context_t ctx) {
         struct dirent *dirent;
         char date[80], last_updated[80];
         struct tm *l;
+        char *baseurl = hstore_option_findtext(ctx->config, "hStoreBaseURL");
         l = localtime(&s_doc.st_ctime);
+
+        if (!baseurl) {
+            LOGERR("hStoreBaseURL is required, but not set in the server configuration");
+            return EINVAL;
+        }
         
         hstore_format_date(date);
         snprintf(last_updated, sizeof(last_updated), "%04d-%02d-%02d %02d:%02d",
@@ -164,9 +170,9 @@ int hStoreDocReader(hstore_context_t ctx) {
 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
 "<feed xmlns=\"http://www.w3.org/2005/Atom\">\n"
 "<title>%s</title>\n"
-"<link href=\"%s\" rel=\"self\" />\n"
+"<link href=\"%s%s\" rel=\"self\" />\n"
 "<updated>%s</updated>\n"
-, ctx->request_path, ctx->request_path, last_updated);
+, ctx->request_path, baseurl, ctx->request_path, last_updated);
 
         LOG("%s generating ATOM feed for %s", __func__, document_path);
         dirp = opendir(document_path);
@@ -190,10 +196,10 @@ int hStoreDocReader(hstore_context_t ctx) {
             printf(
 "<entry>\n"
 "    <title>%s</title>\n"
-"    <link href=\"%s/%s\" />\n"
+"    <link href=\"%s%s/%s\" />\n"
 "    <updated>%s</updated>\n"
 "</entry>\n"
-, dirent->d_name, ctx->request_path, dirent->d_name, file_updated);
+, dirent->d_name, baseurl, ctx->request_path, dirent->d_name, file_updated);
 
         }
 
