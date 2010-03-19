@@ -34,6 +34,10 @@ LogFile
 	requests. This file must be accessible to the hStore server from the 
 	web server.
 
+hStoreBaseURL
+        Used to generate ATOM feeds and in other places. This is the base URL 
+        to the hstore RESTful service.
+
 Plugin
 	The hData server module uses a plugin architecture for future expansion.
 	Multiple plugins may be tied to any HTTP request method that your
