@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include "auto-config.h"
 #include "hstore.h"
@@ -73,12 +74,14 @@ int hStoreDocReader(hstore_context_t ctx) {
     char *document_path;
     FILE *file;
     char buf[128];
+    struct stat s_doc;
 
     if (document_root) {
         asprintf(&document_path, "%s/%s", document_root, ctx->request_path);
     } else {
         document_path = strdup(ctx->request_path);
     }
+    stat(document_path, &s_doc);
 
     /* Dynamically write root document */
     if (!strcmp(ctx->request_path + strlen(ctx->request_path) - 9,
@@ -90,7 +93,6 @@ int hStoreDocReader(hstore_context_t ctx) {
         DIR *dirp;
         struct dirent *dirent;
         char date[80];
-
 
         hstore_format_date(date);
         j = strchr(date, ' ');
@@ -144,6 +146,58 @@ int hStoreDocReader(hstore_context_t ctx) {
         free(dirpath);
         printf("    </sections>\n");
         printf("</root>\n");
+
+    /* Generate ATOM feed of directories */
+    } else if (s_doc.st_mode & S_IFDIR) {
+        DIR *dirp;
+        struct dirent *dirent;
+        char date[80], last_updated[80];
+        struct tm *l;
+        l = localtime(&s_doc.st_ctime);
+        
+        hstore_format_date(date);
+        snprintf(last_updated, sizeof(last_updated), "%04d-%02d-%02d %02d:%02d",
+            l->tm_year+1900, l->tm_mon+1, l->tm_mday, l->tm_hour, l->tm_min);
+
+        printf("Content-Type: application/xml\n\n");
+        printf(
+"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+"<feed xmlns=\"http://www.w3.org/2005/Atom\">\n"
+"<title>%s</title>\n"
+"<link href=\"%s\" rel=\"self\" />\n"
+"<updated>%s</updated>\n"
+, ctx->request_path, ctx->request_path, last_updated);
+
+        LOG("%s generating ATOM feed for %s", __func__, document_path);
+        dirp = opendir(document_path);
+        while( ( dirent = readdir(dirp) ) != NULL) {
+            struct stat s;
+            char file_updated[80];
+            char *fn;
+
+            asprintf(&fn, "%s/%s", document_path, dirent->d_name);
+            stat(fn, &s);
+            struct tm *lf;
+            lf = localtime(&s.st_mtime);
+            snprintf(file_updated, sizeof(last_updated), 
+                "%04d-%02d-%02d %02d:%02d", l->tm_year+1900, l->tm_mon+1, 
+                l->tm_mday, l->tm_hour, l->tm_min);
+
+            free(fn);
+
+            if (!strcmp(dirent->d_name, ".") || !strcmp(dirent->d_name, ".."))
+                continue;
+            printf(
+"<entry>\n"
+"    <title>%s</title>\n"
+"    <link href=\"%s/%s\" />\n"
+"    <updated>%s</updated>\n"
+"</entry>\n"
+, dirent->d_name, ctx->request_path, dirent->d_name, file_updated);
+
+        }
+
+        printf("</feed>\n");
 
     /* Fetch all oher files */
     } else {
